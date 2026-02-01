@@ -3,7 +3,8 @@ import SwiftUI
 struct CalendarView: View {
     @State private var displayedMonth = Date()
     @State private var monthId = UUID()
-    @StateObject private var eventManager = EventManager()
+    @AppStorage("dismissedCalendarWarning") private var dismissedWarning = false
+    @ObservedObject var eventManager: EventManager
 
     private let calendar = Calendar.current
     private let dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -16,10 +17,18 @@ struct CalendarView: View {
 
                 Spacer()
 
-                Text(monthYearString)
-                    .font(.system(size: 13, weight: .semibold))
-                    .id(monthId)
-                    .transition(.opacity)
+                HStack(spacing: 6) {
+                    Text(monthYearString)
+                        .font(.system(size: 13, weight: .semibold))
+
+                    if eventManager.isLoading {
+                        ProgressView()
+                            .scaleEffect(0.5)
+                            .frame(width: 12, height: 12)
+                    }
+                }
+                .id(monthId)
+                .transition(.opacity)
 
                 Spacer()
 
@@ -51,6 +60,31 @@ struct CalendarView: View {
             .id(monthId)
             .transition(.opacity)
 
+            // Warning banner
+            if !eventManager.hasAccess && !dismissedWarning {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text("No calendar access")
+                    Spacer()
+                    Button(action: openCalendarPermissions) {
+                        Text("Grant")
+                            .fontWeight(.medium)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                    Button(action: { dismissedWarning = true }) {
+                        Image(systemName: "xmark")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .font(.system(size: 10))
+                .padding(8)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+
             Divider()
 
             // Footer
@@ -63,11 +97,15 @@ struct CalendarView: View {
 
                 Spacer()
 
-                if !eventManager.hasAccess {
-                    Text("No calendar access")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                Button(action: openCalendarApp) {
+                    HStack(spacing: 2) {
+                        Text("Open Calendar")
+                        Image(systemName: "arrow.up.forward")
+                            .font(.system(size: 9))
+                    }
                 }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
             }
             .font(.system(size: 11))
         }
@@ -106,6 +144,14 @@ struct CalendarView: View {
             displayedMonth = Date()
             monthId = UUID()
         }
+    }
+
+    private func openCalendarApp() {
+        NSWorkspace.shared.open(URL(string: "ical://")!)
+    }
+
+    private func openCalendarPermissions() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
     }
 
     private func daysInMonth() -> [Date] {
@@ -162,5 +208,5 @@ struct NavButton: View {
 }
 
 #Preview {
-    CalendarView()
+    CalendarView(eventManager: EventManager())
 }

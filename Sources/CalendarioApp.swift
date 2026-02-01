@@ -13,13 +13,18 @@ struct CalendarioApp: App {
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem!
     var popover: NSPopover!
+    var eventMonitor: Any?
+    var eventManager: EventManager!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        eventManager = EventManager()
         setupStatusItem()
         setupPopover()
+        setupEventMonitor()
     }
 
     func setupStatusItem() {
@@ -36,7 +41,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.contentSize = NSSize(width: 240, height: 300)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: CalendarView())
+        popover.contentViewController = NSHostingController(rootView: CalendarView(eventManager: eventManager))
+    }
+
+    func setupEventMonitor() {
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            if let popover = self?.popover, popover.isShown {
+                popover.performClose(nil)
+            }
+        }
     }
 
     @objc func handleClick(_ sender: NSStatusBarButton) {
@@ -54,7 +67,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(sender)
         } else {
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
-            NSApp.activate(ignoringOtherApps: true)
+            popover.contentViewController?.view.window?.makeKey()
         }
     }
 

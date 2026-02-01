@@ -6,6 +6,7 @@ class EventManager: ObservableObject {
     private let store = EKEventStore()
     @Published var events: [Date: [EKEvent]] = [:]
     @Published var hasAccess = false
+    @Published var isLoading = false
 
     private let calendar = Calendar.current
 
@@ -16,6 +17,7 @@ class EventManager: ObservableObject {
     }
 
     func requestAccess() async {
+        isLoading = true
         do {
             let granted: Bool
             if #available(macOS 14.0, *) {
@@ -28,12 +30,17 @@ class EventManager: ObservableObject {
             print("Calendar access error: \(error)")
             hasAccess = false
         }
+        isLoading = false
     }
 
     func fetchEvents(for month: Date) {
         guard hasAccess else { return }
+        isLoading = true
 
-        guard let monthInterval = calendar.dateInterval(of: .month, for: month) else { return }
+        guard let monthInterval = calendar.dateInterval(of: .month, for: month) else {
+            isLoading = false
+            return
+        }
 
         // Extend range to cover visible days from adjacent months
         let startDate = calendar.date(byAdding: .day, value: -7, to: monthInterval.start) ?? monthInterval.start
@@ -58,6 +65,7 @@ class EventManager: ObservableObject {
         }
 
         self.events = grouped
+        isLoading = false
     }
 
     func events(for date: Date) -> [EKEvent] {
