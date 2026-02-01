@@ -1,15 +1,134 @@
 import SwiftUI
 import AppKit
+import ServiceManagement
 
 @main
 struct CalendarioApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     var body: some Scene {
-        MenuBarExtra {
-            CalendarView()
-        } label: {
-            Image(nsImage: createMenuBarIcon())
+        Settings {
+            EmptyView()
         }
-        .menuBarExtraStyle(.window)
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    var statusItem: NSStatusItem!
+    var popover: NSPopover!
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        setupStatusItem()
+        setupPopover()
+    }
+
+    func setupStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+
+        if let button = statusItem.button {
+            button.image = createMenuBarIcon()
+            button.action = #selector(handleClick)
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
+    }
+
+    func setupPopover() {
+        popover = NSPopover()
+        popover.contentSize = NSSize(width: 300, height: 400)
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(rootView: CalendarView())
+    }
+
+    @objc func handleClick(_ sender: NSStatusBarButton) {
+        let event = NSApp.currentEvent!
+
+        if event.type == .rightMouseUp {
+            showContextMenu()
+        } else {
+            togglePopover(sender)
+        }
+    }
+
+    func togglePopover(_ sender: NSStatusBarButton) {
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
+    func showContextMenu() {
+        let menu = NSMenu()
+
+        // Launch at login
+        let launchAtLogin = SMAppService.mainApp.status == .enabled
+        let launchItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(toggleLaunchAtLogin),
+            keyEquivalent: ""
+        )
+        launchItem.state = launchAtLogin ? .on : .off
+        menu.addItem(launchItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        // About
+        let aboutItem = NSMenuItem(
+            title: "About Calendario",
+            action: #selector(showAbout),
+            keyEquivalent: ""
+        )
+        menu.addItem(aboutItem)
+
+        // GitHub
+        let githubItem = NSMenuItem(
+            title: "View on GitHub",
+            action: #selector(openGitHub),
+            keyEquivalent: ""
+        )
+        menu.addItem(githubItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        // Quit
+        let quitItem = NSMenuItem(
+            title: "Quit Calendario",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        menu.addItem(quitItem)
+
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    @objc func toggleLaunchAtLogin() {
+        do {
+            if SMAppService.mainApp.status == .enabled {
+                try SMAppService.mainApp.unregister()
+            } else {
+                try SMAppService.mainApp.register()
+            }
+        } catch {
+            print("Failed to toggle launch at login: \(error)")
+        }
+    }
+
+    @objc func showAbout() {
+        let alert = NSAlert()
+        alert.messageText = "Calendario"
+        alert.informativeText = "Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0")\n\nA lightweight macOS menubar calendar.\n\nMIT License"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    @objc func openGitHub() {
+        if let url = URL(string: "https://github.com/abimaelmartell/calendario") {
+            NSWorkspace.shared.open(url)
+        }
     }
 }
 

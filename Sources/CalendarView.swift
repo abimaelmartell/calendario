@@ -2,7 +2,6 @@ import SwiftUI
 
 struct CalendarView: View {
     @State private var displayedMonth = Date()
-    @State private var showSettings = false
     @StateObject private var eventManager = EventManager()
 
     private let calendar = Calendar.current
@@ -64,13 +63,7 @@ struct CalendarView: View {
                     Text("No calendar access")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    Spacer()
                 }
-
-                NavButton(systemName: "gear", action: { showSettings = true })
-                    .popover(isPresented: $showSettings) {
-                        SettingsView()
-                    }
             }
             .font(.caption)
             .padding(.horizontal, 8)
