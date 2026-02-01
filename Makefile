@@ -1,4 +1,4 @@
-.PHONY: setup generate build run clean install release zip dmg
+.PHONY: setup generate build run clean install release zip dmg publish
 
 VERSION ?= 1.0.0
 APP_NAME = Calendario
@@ -57,3 +57,17 @@ dmg: build
 release: zip dmg
 	@echo "✓ Release $(VERSION) ready in $(RELEASE_DIR)/"
 	@ls -la $(RELEASE_DIR)/
+
+# Publish to GitHub (creates tag and uploads release)
+publish: release
+	@which gh > /dev/null || (echo "Install GitHub CLI first: brew install gh" && exit 1)
+	@echo "Creating GitHub release v$(VERSION)..."
+	git tag -a v$(VERSION) -m "Release v$(VERSION)" 2>/dev/null || echo "Tag v$(VERSION) already exists"
+	git push origin v$(VERSION) 2>/dev/null || true
+	gh release create v$(VERSION) \
+		$(RELEASE_DIR)/$(APP_NAME)-$(VERSION).zip \
+		$(RELEASE_DIR)/$(APP_NAME)-$(VERSION).dmg \
+		--title "Calendario v$(VERSION)" \
+		--notes "## Download\n\n- **DMG** (recommended): Mount and drag to Applications\n- **ZIP**: Extract and move to Applications\n\n## Requirements\n\n- macOS 13 or later"
+	@echo "✓ Published v$(VERSION) to GitHub"
+	@echo "  https://github.com/abimaelmartell/calendario/releases/tag/v$(VERSION)"
