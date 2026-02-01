@@ -18,12 +18,15 @@ A lightweight macOS menubar calendar app built with SwiftUI.
 ## Requirements
 
 - macOS 13.0 or later
-- Xcode 14+ (for building)
 - Calendar access permission
 
-## Installation
+## Download
 
-### Build from source
+Get the latest release from the **[download page](https://abimaelmartell.github.io/calendario/)** or directly from [GitHub Releases](https://github.com/abimaelmartell/calendario/releases).
+
+## Build from Source
+
+If you prefer to build locally:
 
 ```bash
 # Install xcodegen (one-time)
@@ -35,7 +38,7 @@ cd calendario
 make run
 ```
 
-### Install to Applications
+To install to Applications:
 
 ```bash
 make install
