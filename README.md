@@ -30,7 +30,7 @@ A lightweight macOS menubar calendar app built with SwiftUI.
 brew install xcodegen
 
 # Clone and build
-git clone https://github.com/pinkstack/calendario.git
+git clone https://github.com/abimaelmartell/calendario.git
 cd calendario
 make run
 ```
