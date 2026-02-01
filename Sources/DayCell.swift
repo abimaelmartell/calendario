@@ -21,9 +21,9 @@ struct DayCell: View {
     }
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 1) {
             Text("\(calendar.component(.day, from: date))")
-                .font(.system(size: 12, weight: isToday ? .bold : .regular))
+                .font(.system(size: 11, weight: isToday ? .bold : .regular))
                 .foregroundColor(foregroundColor)
 
             // Event indicator dot
@@ -36,9 +36,9 @@ struct DayCell: View {
                     .frame(height: 4)
             }
         }
-        .frame(width: 32, height: 36)
+        .frame(width: 28, height: 28)
         .background(backgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 4))
         .onHover { hovering in
             isHovered = hovering
         }

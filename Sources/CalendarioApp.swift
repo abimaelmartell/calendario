@@ -34,7 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setupPopover() {
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 300, height: 400)
+        popover.contentSize = NSSize(width: 240, height: 300)
         popover.behavior = .transient
         popover.contentViewController = NSHostingController(rootView: CalendarView())
     }

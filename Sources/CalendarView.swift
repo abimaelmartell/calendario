@@ -8,7 +8,7 @@ struct CalendarView: View {
     private let dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 6) {
             // Header with month navigation
             HStack {
                 NavButton(systemName: "chevron.left", action: previousMonth)
@@ -16,19 +16,18 @@ struct CalendarView: View {
                 Spacer()
 
                 Text(monthYearString)
-                    .font(.headline)
+                    .font(.system(size: 13, weight: .semibold))
 
                 Spacer()
 
                 NavButton(systemName: "chevron.right", action: nextMonth)
             }
-            .padding(.horizontal, 4)
 
             // Day names header
             HStack(spacing: 0) {
                 ForEach(dayNames, id: \.self) { day in
                     Text(day)
-                        .font(.caption)
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity)
                 }
@@ -36,7 +35,7 @@ struct CalendarView: View {
 
             // Calendar grid
             let days = daysInMonth()
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 2) {
                 ForEach(days, id: \.self) { date in
                     DayCell(
                         date: date,
@@ -65,11 +64,10 @@ struct CalendarView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .font(.caption)
-            .padding(.horizontal, 8)
+            .font(.system(size: 11))
         }
-        .padding()
-        .frame(width: 300)
+        .padding(10)
+        .frame(width: 240)
         .onAppear {
             eventManager.fetchEvents(for: displayedMonth)
         }
@@ -128,11 +126,11 @@ struct NavButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(isHovered ? .primary : .secondary)
-                .frame(width: 28, height: 28)
+                .frame(width: 22, height: 22)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(isHovered ? Color.secondary.opacity(0.2) : Color.clear)
                 )
         }
