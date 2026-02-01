@@ -1,0 +1,26 @@
+name: Calendario
+options:
+  bundleIdPrefix: com.calendario
+  deploymentTarget:
+    macOS: "13.0"
+  minimumXcodeGenVersion: "2.0"
+
+targets:
+  Calendario:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.calendario.app
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
+        # Menubar app settings (no dock icon)
+        LSUIElement: true
+        CODE_SIGN_ENTITLEMENTS: Calendario.entitlements
