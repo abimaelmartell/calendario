@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @State private var displayedMonth = Date()
+    @State private var monthId = UUID()
     @StateObject private var eventManager = EventManager()
 
     private let calendar = Calendar.current
@@ -17,6 +18,8 @@ struct CalendarView: View {
 
                 Text(monthYearString)
                     .font(.system(size: 13, weight: .semibold))
+                    .id(monthId)
+                    .transition(.opacity)
 
                 Spacer()
 
@@ -45,13 +48,15 @@ struct CalendarView: View {
                     )
                 }
             }
+            .id(monthId)
+            .transition(.opacity)
 
             Divider()
 
             // Footer
             HStack {
                 Button("Today") {
-                    displayedMonth = Date()
+                    goToToday()
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
@@ -83,11 +88,24 @@ struct CalendarView: View {
     }
 
     private func previousMonth() {
-        displayedMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) ?? displayedMonth
+        withAnimation(.easeInOut(duration: 0.2)) {
+            displayedMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) ?? displayedMonth
+            monthId = UUID()
+        }
     }
 
     private func nextMonth() {
-        displayedMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth
+        withAnimation(.easeInOut(duration: 0.2)) {
+            displayedMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth
+            monthId = UUID()
+        }
+    }
+
+    private func goToToday() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            displayedMonth = Date()
+            monthId = UUID()
+        }
     }
 
     private func daysInMonth() -> [Date] {
