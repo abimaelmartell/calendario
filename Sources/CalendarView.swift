@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CalendarView: View {
     @State private var displayedMonth = Date()
+    @State private var selectedDate = Date()
     @State private var monthId = UUID()
     @AppStorage("dismissedCalendarWarning") private var dismissedWarning = false
     @ObservedObject var eventManager: EventManager
@@ -53,7 +54,9 @@ struct CalendarView: View {
                         date: date,
                         isCurrentMonth: isCurrentMonth(date),
                         isToday: isToday(date),
-                        eventManager: eventManager
+                        isSelected: calendar.isDate(date, inSameDayAs: selectedDate),
+                        eventManager: eventManager,
+                        onSelect: { selectDate(date) }
                     )
                 }
             }
@@ -84,6 +87,14 @@ struct CalendarView: View {
                 .background(Color.orange.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             }
+
+            Divider()
+
+            // Events section
+            EventListSection(
+                date: selectedDate,
+                events: eventManager.events(for: selectedDate)
+            )
 
             Divider()
 
@@ -125,24 +136,45 @@ struct CalendarView: View {
         return formatter.string(from: displayedMonth)
     }
 
+    private func selectDate(_ date: Date) {
+        selectedDate = date
+        if !calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month) {
+            withAnimation(.easeInOut(duration: 0.1)) {
+                displayedMonth = date
+                monthId = UUID()
+            }
+        }
+    }
+
     private func previousMonth() {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.1)) {
             displayedMonth = calendar.date(byAdding: .month, value: -1, to: displayedMonth) ?? displayedMonth
             monthId = UUID()
         }
+        updateSelectedDateForMonth()
     }
 
     private func nextMonth() {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.1)) {
             displayedMonth = calendar.date(byAdding: .month, value: 1, to: displayedMonth) ?? displayedMonth
             monthId = UUID()
         }
+        updateSelectedDateForMonth()
     }
 
     private func goToToday() {
-        withAnimation(.easeInOut(duration: 0.2)) {
+        withAnimation(.easeInOut(duration: 0.1)) {
             displayedMonth = Date()
             monthId = UUID()
+        }
+        selectedDate = Date()
+    }
+
+    private func updateSelectedDateForMonth() {
+        if calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month) {
+            selectedDate = Date()
+        } else if let interval = calendar.dateInterval(of: .month, for: displayedMonth) {
+            selectedDate = interval.start
         }
     }
 
@@ -200,7 +232,7 @@ struct NavButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) {
+            withAnimation(.easeInOut(duration: 0.08)) {
                 isHovered = hovering
             }
         }

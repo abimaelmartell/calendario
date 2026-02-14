@@ -7,8 +7,10 @@ class EventManager: ObservableObject {
     @Published var events: [Date: [EKEvent]] = [:]
     @Published var hasAccess = false
     @Published var isLoading = false
+    @Published var upcomingMeeting: EKEvent?
 
     private let calendar = Calendar.current
+    private var meetingCheckTimer: Timer?
 
     init() {
         Task {
@@ -26,11 +28,49 @@ class EventManager: ObservableObject {
                 granted = try await store.requestAccess(to: .event)
             }
             hasAccess = granted
+            if granted {
+                startMeetingCheckTimer()
+                checkUpcomingMeetings()
+            }
         } catch {
             print("Calendar access error: \(error)")
             hasAccess = false
         }
         isLoading = false
+    }
+
+    private func startMeetingCheckTimer() {
+        meetingCheckTimer?.invalidate()
+        meetingCheckTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.checkUpcomingMeetings()
+            }
+        }
+    }
+
+    func checkUpcomingMeetings() {
+        guard hasAccess else {
+            upcomingMeeting = nil
+            return
+        }
+
+        let now = Date()
+        let startOfDay = calendar.startOfDay(for: now)
+        let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: now) ?? now
+
+        let predicate = store.predicateForEvents(withStart: startOfDay, end: endOfDay, calendars: nil)
+        let todayEvents = store.events(matching: predicate)
+
+        // Find first event with a meeting link where now is between (startDate - 5min) and endDate
+        let meeting = todayEvents.first { event in
+            guard event.meetingLink != nil,
+                  let startDate = event.startDate,
+                  let endDate = event.endDate else { return false }
+            let windowStart = calendar.date(byAdding: .minute, value: -5, to: startDate) ?? startDate
+            return now >= windowStart && now < endDate
+        }
+
+        upcomingMeeting = meeting
     }
 
     func fetchEvents(for month: Date) {
@@ -66,6 +106,7 @@ class EventManager: ObservableObject {
 
         self.events = grouped
         isLoading = false
+        checkUpcomingMeetings()
     }
 
     func events(for date: Date) -> [EKEvent] {
