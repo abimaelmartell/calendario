@@ -32,6 +32,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupPopover()
         setupEventMonitor()
         observeUpcomingMeeting()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(dayChanged),
+            name: .NSCalendarDayChanged,
+            object: nil
+        )
+    }
+
+    @objc func dayChanged() {
+        statusItemView.calendarIcon.image = StatusItemView.createCalendarIcon()
     }
 
     func setupStatusItem() {
