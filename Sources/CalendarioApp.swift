@@ -4,6 +4,58 @@ import Combine
 import EventKit
 import ServiceManagement
 
+// MARK: - Crash Logger
+
+enum CrashLog {
+    private static let logDir = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Logs/Calendario")
+    private static let logFile = logDir.appendingPathComponent("calendario.log")
+    private static let pidFile = logDir.appendingPathComponent(".running_pid")
+
+    static func setup() {
+        try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+
+        // Check if previous session ended cleanly
+        if let pidData = try? Data(contentsOf: pidFile),
+           let pidString = String(data: pidData, encoding: .utf8) {
+            write("Previous session (PID \(pidString)) did not exit cleanly — likely crashed or was killed by macOS")
+        }
+
+        // Write current PID
+        try? "\(ProcessInfo.processInfo.processIdentifier)".data(using: .utf8)?.write(to: pidFile)
+
+        write("App launched (PID \(ProcessInfo.processInfo.processIdentifier))")
+
+        NSSetUncaughtExceptionHandler { exception in
+            CrashLog.write("UNCAUGHT EXCEPTION: \(exception.name.rawValue) — \(exception.reason ?? "no reason")")
+            CrashLog.write("Stack trace:\n\(exception.callStackSymbols.joined(separator: "\n"))")
+        }
+    }
+
+    static func cleanShutdown() {
+        write("App terminated normally")
+        try? FileManager.default.removeItem(at: pidFile)
+    }
+
+    static func write(_ message: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let line = "[\(timestamp)] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: logFile.path) {
+                if let handle = try? FileHandle(forWritingTo: logFile) {
+                    handle.seekToEndOfFile()
+                    handle.write(data)
+                    handle.closeFile()
+                }
+            } else {
+                try? data.write(to: logFile)
+            }
+        }
+    }
+
+    static var logPath: URL { logFile }
+}
+
 @main
 struct CalendarioApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -27,6 +79,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastPopoverCloseDate: Date?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        CrashLog.setup()
+
         eventManager = EventManager()
         setupStatusItem()
         setupPopover()
@@ -39,10 +93,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .NSCalendarDayChanged,
             object: nil
         )
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(systemDidWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil
+        )
     }
 
     @objc func dayChanged() {
         statusItemView.calendarIcon.image = StatusItemView.createCalendarIcon()
+    }
+
+    @objc func systemDidWake() {
+        statusItemView.calendarIcon.image = StatusItemView.createCalendarIcon()
+        eventManager.checkUpcomingMeetings()
     }
 
     func setupStatusItem() {
@@ -65,7 +131,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func handleClick(_ sender: NSStatusBarButton) {
-        let event = NSApp.currentEvent!
+        guard let event = NSApp.currentEvent else { return }
 
         if event.type == .rightMouseUp {
             showContextMenu()
@@ -159,6 +225,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         menu.addItem(githubItem)
 
+        // Show Logs
+        let logsItem = NSMenuItem(
+            title: "Show Logs",
+            action: #selector(showLogs),
+            keyEquivalent: ""
+        )
+        menu.addItem(logsItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Quit
@@ -207,6 +281,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        CrashLog.cleanShutdown()
+    }
+
     @objc func showAbout() {
         let alert = NSAlert()
         alert.messageText = "Calendario"
@@ -220,6 +298,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let url = URL(string: "https://github.com/abimaelmartell/calendario") {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    @objc func showLogs() {
+        NSWorkspace.shared.open(CrashLog.logPath)
     }
 }
 
@@ -238,8 +320,8 @@ class StatusItemView: NSView {
         calendarIcon.imageScaling = .scaleNone
 
         let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
-        let videoImage = NSImage(systemSymbolName: "video.fill", accessibilityDescription: "Upcoming meeting")!
-            .withSymbolConfiguration(config)!
+        let videoImage = NSImage(systemSymbolName: "video.fill", accessibilityDescription: "Upcoming meeting")?
+            .withSymbolConfiguration(config) ?? NSImage()
         videoImage.isTemplate = true
         meetingIcon = NSImageView()
         meetingIcon.image = videoImage

@@ -63,7 +63,8 @@ class EventManager: ObservableObject {
 
         // Find first event with a meeting link where now is between (startDate - 5min) and endDate
         let meeting = todayEvents.first { event in
-            guard event.meetingLink != nil,
+            guard event.calendar != nil,
+                  event.meetingLink != nil,
                   let startDate = event.startDate,
                   let endDate = event.endDate else { return false }
             let windowStart = calendar.date(byAdding: .minute, value: -5, to: startDate) ?? startDate

@@ -140,13 +140,18 @@ struct EventDetailPopover: View {
         return f
     }()
 
+    private var calendarColor: Color {
+        guard let cal = event.calendar else { return .gray }
+        return Color(cgColor: cal.cgColor)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 // Title with calendar color
                 HStack(alignment: .top, spacing: 6) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color(cgColor: event.calendar.cgColor))
+                        .fill(calendarColor)
                         .frame(width: 4, height: 16)
 
                     Text(event.title ?? "Untitled")
@@ -164,10 +169,12 @@ struct EventDetailPopover: View {
                         .frame(width: 14)
 
                     if event.isAllDay {
-                        Text("All day — \(dateFormatter.string(from: event.startDate))")
-                            .font(.system(size: 11))
-                    } else {
-                        Text("\(timeFormatter.string(from: event.startDate)) — \(timeFormatter.string(from: event.endDate))")
+                        if let start = event.startDate {
+                            Text("All day — \(dateFormatter.string(from: start))")
+                                .font(.system(size: 11))
+                        }
+                    } else if let start = event.startDate, let end = event.endDate {
+                        Text("\(timeFormatter.string(from: start)) — \(timeFormatter.string(from: end))")
                             .font(.system(size: 11))
                     }
                 }
@@ -180,10 +187,10 @@ struct EventDetailPopover: View {
                         .frame(width: 14)
 
                     Circle()
-                        .fill(Color(cgColor: event.calendar.cgColor))
+                        .fill(calendarColor)
                         .frame(width: 8, height: 8)
 
-                    Text(event.calendar.title)
+                    Text(event.calendar?.title ?? "Unknown")
                         .font(.system(size: 11))
                 }
 
@@ -271,10 +278,15 @@ struct EventRow: View {
     @State private var isHovered = false
     @State private var showDetail = false
 
+    private var calendarColor: Color {
+        guard let cal = event.calendar else { return .gray }
+        return Color(cgColor: cal.cgColor)
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 6) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color(cgColor: event.calendar.cgColor))
+                .fill(calendarColor)
                 .frame(width: 3, height: 16)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -286,8 +298,8 @@ struct EventRow: View {
                     Text("All day")
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
-                } else {
-                    Text("\(timeFormatter.string(from: event.startDate)) — \(timeFormatter.string(from: event.endDate))")
+                } else if let start = event.startDate, let end = event.endDate {
+                    Text("\(timeFormatter.string(from: start)) — \(timeFormatter.string(from: end))")
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
                 }
@@ -330,9 +342,10 @@ struct MeetingPopoverView: View {
     }()
 
     private var timeStatus: String {
+        guard let startDate = event.startDate else { return "In progress" }
         let now = Date()
-        if now < event.startDate {
-            let minutes = Int(event.startDate.timeIntervalSince(now) / 60)
+        if now < startDate {
+            let minutes = Int(startDate.timeIntervalSince(now) / 60)
             if minutes <= 0 {
                 return "Starting now"
             }
@@ -341,12 +354,17 @@ struct MeetingPopoverView: View {
         return "In progress"
     }
 
+    private var calendarColor: Color {
+        guard let cal = event.calendar else { return .gray }
+        return Color(cgColor: cal.cgColor)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Title with calendar color bar
             HStack(alignment: .top, spacing: 6) {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color(cgColor: event.calendar.cgColor))
+                    .fill(calendarColor)
                     .frame(width: 4, height: 16)
 
                 Text(event.title ?? "Untitled")
@@ -363,13 +381,15 @@ struct MeetingPopoverView: View {
 
                 Text(timeStatus)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(event.startDate <= Date() ? .green : .orange)
+                    .foregroundColor((event.startDate ?? .distantFuture) <= Date() ? .green : .orange)
             }
 
             // Event time range
-            Text("\(timeFormatter.string(from: event.startDate)) — \(timeFormatter.string(from: event.endDate))")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+            if let start = event.startDate, let end = event.endDate {
+                Text("\(timeFormatter.string(from: start)) — \(timeFormatter.string(from: end))")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
 
             // Join button
             if let meetingLink = event.meetingLink,
