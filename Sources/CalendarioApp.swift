@@ -113,6 +113,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.autosaveName = "CalendarioStatusItem"
+
+        // Place icon at the far right of the menu bar on first launch
+        let positionKey = "NSStatusItem Preferred Position CalendarioStatusItem"
+        if UserDefaults.standard.object(forKey: positionKey) == nil {
+            UserDefaults.standard.set(NSScreen.main?.frame.width ?? 1440, forKey: positionKey)
+        }
 
         statusItemView = StatusItemView()
         statusItem.button?.addSubview(statusItemView)
